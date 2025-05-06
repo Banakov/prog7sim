@@ -1,0 +1,28 @@
+import numpy as np
+from joblib import Parallel, delayed
+import time
+
+def matrix_multiply_row(i, A, B):
+    """Вычисление строки i результата произведения матриц"""
+    return np.dot(A, B)
+
+def multiply_matrices_parallel(A, B, n_jobs=2):
+    """
+    Перемножение матриц A и B с использованием многопоточности через joblib.
+    """
+    result_rows = Parallel(n_jobs=n_jobs)(delayed(matrix_multiply_row)(i, A, B) for i in range(A.shape))
+    return np.array(result_rows)
+
+# Размерность матриц
+size = 500  # Увеличьте для оценки производительности
+
+# Генерация случайных матриц
+A = np.random.rand(size, size)
+B = np.random.rand(size, size)
+
+# Замер времени работы
+start_time = time.time()
+C = multiply_matrices_parallel(A, B, n_jobs=4)
+end_time = time.time()
+
+print(f"Общее время выполнения умножения матриц: {end_time - start_time:.4f} секунд")
