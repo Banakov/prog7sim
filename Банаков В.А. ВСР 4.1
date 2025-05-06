@@ -1,0 +1,104 @@
+from eve import Eve
+from eve_sqlalchemy import SQLAValidator, Resource, SQL
+from sqlalchemy import Column, String, Integer, ForeignKey, Boolean
+from sqlalchemy.orm import relationship
+from sqlalchemy.ext.declarative import declarative_base
+
+# Создаем базовую модель
+Base = declarative_base()
+
+# Модель пользователя
+class User(Base):
+    __tablename__ = 'user'
+    id = Column(Integer, primary_key=True)
+    username = Column(String, unique=True, nullable=False)
+    email = Column(String, unique=True, nullable=False)
+    password_hash = Column(String, nullable=False)
+    # связи
+    polls = relationship("Poll", back_populates="owner")
+    votes = relationship("Vote", back_populates="user")
+
+# Модель опроса
+class Poll(Base):
+    __tablename__ = 'poll'
+    id = Column(Integer, primary_key=True)
+    question = Column(String, nullable=False)
+    owner_id = Column(Integer, ForeignKey('user.id'))
+    is_active = Column(Boolean, default=True)
+    # связи
+    owner = relationship("User", back_populates="polls")
+    options = relationship("Option", back_populates="poll")
+    votes = relationship("Vote", back_populates="poll")
+
+# Модель варианта ответа в опросе
+class Option(Base):
+    __tablename__ = 'option'
+    id = Column(Integer, primary_key=True)
+    text = Column(String, nullable=False)
+    poll_id = Column(Integer, ForeignKey('poll.id'))
+    # связи
+    poll = relationship("Poll", back_populates="options")
+    votes = relationship("Vote", back_populates="option")
+
+# Модель голосования
+class Vote(Base):
+    __tablename__ = 'vote'
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('user.id'))
+    poll_id = Column(Integer, ForeignKey('poll.id'))
+    option_id = Column(Integer, ForeignKey('option.id'))
+    # связи
+    user = relationship("User", back_populates="votes")
+    poll = relationship("Poll", back_populates="votes")
+    option = relationship("Option", back_populates="votes")
+
+# Конфигурация Eve с использованием SQLAlchemy
+app = Eve(
+    settings={
+        'SQLALCHEMY_DATABASE_URI': 'sqlite:///voting_system.db',
+        'SQLALCHEMY_ECHO': True,
+        'DOMAIN': {
+            'users': {
+                'schema': {
+                    'username': {'type': 'string'},
+                    'email': {'type': 'string'},
+                    'password_hash': {'type': 'string'},
+                }
+            },
+            'polls': {
+                'schema': {
+                    'question': {'type': 'string'},
+                    'owner_id': {'type': 'integer'},
+                    'is_active': {'type': 'boolean'}
+                }
+            },
+            'options': {
+                'schema': {
+                    'text': {'type': 'string'},
+                    'poll_id': {'type': 'integer'}
+                }
+            },
+            'votes': {
+                'schema': {
+                    'user_id': {'type': 'integer'},
+                    'poll_id': {'type': 'integer'},
+                    'option_id': {'type': 'integer'}
+                }
+            }
+        },
+        'DOMAIN': {
+            'users': {'dataset': User},
+            'polls': {'dataset': Poll},
+            'options': {'dataset': Option},
+            'votes': {'dataset': Vote}
+        }
+    }
+)
+
+if __name__ == '__main__':
+    # Создаем таблицы
+    from sqlalchemy import create_engine
+    engine = create_engine('sqlite:///voting_system.db')
+    Base.metadata.create_all(engine)
+
+    app.run()
