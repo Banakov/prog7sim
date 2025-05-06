@@ -1,0 +1,66 @@
+
+2.1 Запись данных в CSV с использованием процессов
+import csv
+import multiprocessing
+import time
+
+def write_to_csv(data, filename):
+    with open(filename, mode='a', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(data)
+
+def worker(data_chunk, filename):
+    write_to_csv(data_chunk, filename)
+
+if name == 'main':
+    filename = 'output.csv'
+    data = [['Name', 'Age'], ['Alice', 30], ['Bob', 25], ['Charlie', 35]]
+    
+    # Удаляем заголовки, чтобы записать их только один раз
+    header = data[0]
+    data_chunks = data[1:]
+
+    # Записываем заголовки в файл
+    write_to_csv(header, filename)
+
+    start_time = time.time()
+
+    with multiprocessing.Pool(processes=3) as pool:
+        pool.starmap(worker, [(chunk, filename) for chunk in data_chunks])
+
+    end_time = time.time()
+    print(f"Время выполнения с использованием процессов: {end_time - start_time} секунд")
+
+2.2 Запись данных в CSV с использованием потоков
+рефакторим код для использования потоков.
+
+import csv
+import threading
+import time
+
+def write_to_csv(data, filename):
+    with open(filename, mode='a', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(data)
+
+def worker(data_chunk, filename):
+    write_to_csv(data_chunk, filename)
+
+if name == 'main':
+    filename = 'output.csv'
+    data = [['Name', 'Age'], ['Alice', 30], ['Bob', 25],
+
+['Charlie', 35]]
+    
+    # Удаляем заголовки, чтобы записать их только один раз
+    header = data[0]
+    data_chunks = data[1:]
+
+    # Записываем заголовки в файл
+    write_to_csv(header, filename)
+
+    start_time = time.time()
+
+    threads = []
+    for chunk in data_chunks:
+        thread = threading.Thread(target=worker, args=(chunk, filename
