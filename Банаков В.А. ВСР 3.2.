@@ -1,0 +1,50 @@
+import json
+import tornado.ioloop
+import tornado.web
+
+# Глобальный список подключенных клиентов
+clients = set()
+
+class MainHandler(tornado.web.RequestHandler):
+    def get(self):
+        self.write("Chat server is running.")
+
+class WebSocketHandler(tornado.websocket.WebSocketHandler):
+    def open(self):
+        clients.add(self)
+
+    def on_message(self, message):
+        # Предположим, что сообщение содержит поле "recipient" – имя пользователя
+        data = json.loads(message)
+        recipient_id = data.get("recipient")
+        text = data.get("message")
+        sender_name = data.get("sender")
+
+        # Ищем пользователя по идентификатору
+        for client in clients:
+            if hasattr(client, "user_id") and client.user_id == recipient_id:
+                # Отправляем сообщение только конкретному пользователю
+                client.write_message(json.dumps({
+                    "from": sender_name,
+                    "message": text
+                }))
+                break
+
+    def on_close(self):
+        clients.remove(self)
+
+    def check_origin(self, origin):
+        return True
+
+def make_app():
+    return tornado.web.Application()
+
+if __name__ == "__main__":
+    app = make_app()
+    app.listen(8888)
+    tornado.ioloop.IOLoop.current().start()
+
+ключевые изменений:
+- Внутри WebSocketHandler реализована логика для поиска конкретного пользователя по уникальному идентификатору (user_id) и отправки ему сообщения.
+- Для этого после установления соединения можно было бы установить self.user_id у каждого клиента на уникальный идентификатор пользователя, который подключается.
+- В обработчике on_message сообщение содержит поле recipient, указывающее, кому предназначено сообщение, и по нему осуществляется целевая отправка, без широковещательной рассылки.
